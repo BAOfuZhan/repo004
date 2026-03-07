@@ -62,7 +62,7 @@ class reserve:
         max_attempt=50,
         enable_slider=False,
         enable_textclick=False,
-        reserve_next_day=False,
+        day_offset=1,
     ):
         self.login_page = (
             "https://passport2.chaoxing.com/mlogin?loginType=1&newversion=true&fid="
@@ -114,7 +114,7 @@ class reserve:
         self.max_attempt = max_attempt
         self.enable_slider = enable_slider
         self.enable_textclick = enable_textclick
-        self.reserve_next_day = reserve_next_day
+        self.day_offset = day_offset
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
     # login and page token
@@ -555,10 +555,10 @@ class reserve:
         tl = max_loc
         return tl[0]
 
-    def submit(self, times, roomid, seatid, action, endtime_hms: str | None = None, fidEnc: str | None = None, seat_page_id: str | None = None):
+    def submit(self, times, roomid, seatid, action, endtime_hms: str | None = None, fidEnc: str | None = None, seat_page_id: str | None = None, day_offsets: list | None = None):
         """提交预约。
 
-        关键点：为了模拟手动“刷新页面再提交”，这里每次尝试前都会重新访问
+        关键点：为了模拟手动"刷新页面再提交"，这里每次尝试前都会重新访问
         seatengine/select 页面，获取当下最新的 submit_enc 作为 token/algorithm。
 
         参数:
@@ -569,84 +569,96 @@ class reserve:
             endtime_hms: 结束时间（北京时间 HH:MM:SS），用于 GitHub Actions 提前停止
             fidEnc: 对应前端 URL 中的 fidEnc 参数（例如 "dac916902610d220"）
             seat_page_id: 对应前端 URL 中的 seatId 参数（例如 "3308"）
+            day_offsets: 预约的日期偏移列表，默认 [self.day_offset]
         """
-        # 计算与 get_submit 相同的预约日期，保证页面 token 与提交使用的是同一天
-        beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
-        delta_day = 1 if self.reserve_next_day else 0
-        day = beijing_today + datetime.timedelta(days=delta_day)
+        if day_offsets is None:
+            day_offsets = [self.day_offset]
         
-        # 每次调用 submit 时重置 max_attempt，确保每个配置都有充足的重试机会
-        original_max_attempt = self.max_attempt
+        beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
+        
+        suc = False
+        for delta_day in day_offsets:
+            day = beijing_today + datetime.timedelta(days=delta_day)
+            logging.info(f"[submit] Starting reservation for day offset: {delta_day} ({day})")
+            
+            # 每次调用 submit 时重置 max_attempt，确保每个配置都有充足的重试机会
+            original_max_attempt = self.max_attempt
 
-        for seat in seatid:
-            # 为每个座位重置尝试次数
-            self.max_attempt = original_max_attempt
-            suc = False
-            while ~suc and self.max_attempt > 0:
-                # 如果配置了结束时间，并且在 GitHub Actions 模式下，达到或超过结束时间就立刻停止循环
-                if endtime_hms and action:
-                    beijing_now = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
-                    current_hms = beijing_now.strftime("%H:%M:%S")
-                    if current_hms >= endtime_hms:
-                        logging.info(
-                            f"[submit] Current Beijing time {current_hms} >= ENDTIME {endtime_hms}, stop submit loop"
-                        )
-                        return suc
+            for seat in seatid:
+                # 为每个座位重置尝试次数
+                self.max_attempt = original_max_attempt
+                suc = False
+                while ~suc and self.max_attempt > 0:
+                    # 如果配置了结束时间，并且在 GitHub Actions 模式下，达到或超过结束时间就立刻停止循环
+                    if endtime_hms and action:
+                        beijing_now = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+                        current_hms = beijing_now.strftime("%H:%M:%S")
+                        if current_hms >= endtime_hms:
+                            logging.info(
+                                f"[submit] Current Beijing time {current_hms} >= ENDTIME {endtime_hms}, stop submit loop"
+                            )
+                            return suc
 
-                # 使用 seatengine/select 页面获取 submit_enc，相当于手动刷新选座页
-                page_url = self.url.format(
-                    roomId=roomid,
-                    day=str(day),
-                    seatPageId=seat_page_id or "",
-                    fidEnc=fidEnc or "",
-                )
-                # seatengine/select 页面在前端是通过 GET 打开的，这里也使用 GET，
-                # 否则可能拿到的是错误页或不包含 submit_enc 的内容。
-                token, value = self._get_page_token(
-                    page_url,
-                    require_value=True,
-                    method="GET",
-                )
-                logging.info(f"Get token from {page_url}: {token}")
-                # 如果没有拿到 token，通常说明当前会话已失效或页面结构有变，
-                # 不再继续本轮提交，交给外层重新登录/重试。
-                if not token:
-                    logging.warning(
-                        "No submit_enc token fetched, break current submit loop and retry with new session"
+                    # 使用 seatengine/select 页面获取 submit_enc，相当于手动刷新选座页
+                    page_url = self.url.format(
+                        roomId=roomid,
+                        day=str(day),
+                        seatPageId=seat_page_id or "",
+                        fidEnc=fidEnc or "",
                     )
-                    break
+                    # seatengine/select 页面在前端是通过 GET 打开的，这里也使用 GET，
+                    # 否则可能拿到的是错误页或不包含 submit_enc 的内容。
+                    token, value = self._get_page_token(
+                        page_url,
+                        require_value=True,
+                        method="GET",
+                    )
+                    logging.info(f"Get token from {page_url}: {token}")
+                    # 如果没有拿到 token，通常说明当前会话已失效或页面结构有变，
+                    # 不再继续本轮提交，交给外层重新登录/重试。
+                    if not token:
+                        logging.warning(
+                            "No submit_enc token fetched, break current submit loop and retry with new session"
+                        )
+                        break
 
-                # 根据开关决定使用哪种验证码（两种验证码可以同时开启）
-                captcha = ""
-                if self.enable_slider:
-                    captcha = self.resolve_captcha("slide")
-                    logging.info(f"Slider captcha token: {captcha}")
-                elif self.enable_textclick:
-                    captcha = self.resolve_captcha("textclick")
-                    logging.info(f"Textclick captcha token: {captcha}")
-                suc = self.get_submit(
-                    self.submit_url,
-                    times=times,
-                    token=token,
-                    roomid=roomid,
-                    seatid=seat,
-                    captcha=captcha,
-                    action=action,
-                    value=value,
-                )
-                if suc:
-                    return suc
-                time.sleep(self.sleep_time)
-                self.max_attempt -= 1
+                    # 根据开关决定使用哪种验证码（两种验证码可以同时开启）
+                    captcha = ""
+                    if self.enable_slider:
+                        captcha = self.resolve_captcha("slide")
+                        logging.info(f"Slider captcha token: {captcha}")
+                    elif self.enable_textclick:
+                        captcha = self.resolve_captcha("textclick")
+                        logging.info(f"Textclick captcha token: {captcha}")
+                    suc = self.get_submit(
+                        self.submit_url,
+                        times=times,
+                        token=token,
+                        roomid=roomid,
+                        seatid=seat,
+                        captcha=captcha,
+                        action=action,
+                        value=value,
+                    )
+                    if suc:
+                        logging.info(f"[submit] Reservation successful for day offset: {delta_day} ({day})")
+                        break
+                    time.sleep(self.sleep_time)
+                    self.max_attempt -= 1
+            
+            # 如果当天预约成功，继续尝试下一天（day_offsets 中的下一个）
+            # 如果当天预约失败，仍然尝试下一天
+            logging.info(f"[submit] Finished reservation for day offset: {delta_day} ({day}), success: {suc}")
+        
         return suc
 
     def get_submit(
         self, url, times, token, roomid, seatid, captcha="", action=False, value=""
     ):
         # 统一以北京时间（UTC+8）的"今天"为基准，不再区分本地 / GitHub Actions，
-        # 是否预约明天仅由 self.reserve_next_day 决定。
+        # 是否预约明天/后天仅由 self.day_offset 决定。
         beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
-        delta_day = 1 if self.reserve_next_day else 0
+        delta_day = self.day_offset
         day = beijing_today + datetime.timedelta(days=delta_day)
         # 与前端保持一致：提交 roomId/startTime/endTime/day/seatNum/captcha/wyToken，再计算 enc
         # 按前端逻辑：wyToken 仅在开启网易风控时由 wyRiskObj.getToken() 生成；
@@ -691,7 +703,7 @@ class reserve:
         不再直接作为提交字段发送给后端。
         """
         beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
-        delta_day = 1 if self.reserve_next_day else 0
+        delta_day = self.day_offset
         day = beijing_today + datetime.timedelta(days=delta_day)
         parm = {
             "roomId": roomid,

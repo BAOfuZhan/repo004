@@ -60,7 +60,6 @@ ENDTIME = "08:00:40"  # 根据学校的预约座位时间+1min即可
 ENABLE_SLIDER = False  # 是否有滑块验证（调试阶段先关闭）
 ENABLE_TEXTCLICK = False  # 是否有选字验证码（需要图灵云打码平台）
 MAX_ATTEMPT = 30  # 最大尝试次数（减少到30次，确保3个配置都能尝试）
-RESERVE_NEXT_DAY = True  # 预约明天而不是今天的
 
 
 # 是否在每一轮主循环中都重新登录。
@@ -187,7 +186,7 @@ def strategic_first_attempt(
             max_attempt=MAX_ATTEMPT,
             enable_slider=ENABLE_SLIDER,
             enable_textclick=ENABLE_TEXTCLICK,
-            reserve_next_day=RESERVE_NEXT_DAY,
+            day_offset=1,
         )
         s.get_login_status()
         s.login(username, password)
@@ -358,7 +357,7 @@ def login_and_reserve(
     users, usernames, passwords, action, success_list=None, sessions=None
 ):
     logging.info(
-        f"Global settings: \nSLEEPTIME: {SLEEPTIME}\nENDTIME: {ENDTIME}\nENABLE_SLIDER: {ENABLE_SLIDER}\nENABLE_TEXTCLICK: {ENABLE_TEXTCLICK}\nRESERVE_NEXT_DAY: {RESERVE_NEXT_DAY}"
+        f"Global settings: \nSLEEPTIME: {SLEEPTIME}\nENDTIME: {ENDTIME}\nENABLE_SLIDER: {ENABLE_SLIDER}\nENABLE_TEXTCLICK: {ENABLE_TEXTCLICK}"
     )
 
     usernames_list, passwords_list = None, None
@@ -388,6 +387,7 @@ def login_and_reserve(
         seat_page_id = user.get("seatPageId")
         fid_enc = user.get("fidEnc")
         daysofweek = user["daysofweek"]
+        day_offsets = user.get("day_offsets", [1])
 
         # 如果今天不在该配置的 daysofweek 中，直接跳过
         if current_dayofweek not in daysofweek:
@@ -424,7 +424,7 @@ def login_and_reserve(
                         max_attempt=MAX_ATTEMPT,
                         enable_slider=ENABLE_SLIDER,
                         enable_textclick=ENABLE_TEXTCLICK,
-                        reserve_next_day=RESERVE_NEXT_DAY,
+                        day_offset=1,
                     )
                     s.get_login_status()
                     s.login(username, password)
@@ -440,7 +440,7 @@ def login_and_reserve(
                     max_attempt=MAX_ATTEMPT,
                     enable_slider=ENABLE_SLIDER,
                     enable_textclick=ENABLE_TEXTCLICK,
-                    reserve_next_day=RESERVE_NEXT_DAY,
+                    day_offset=1,
                 )
                 s.get_login_status()
                 s.login(username, password)
@@ -455,6 +455,7 @@ def login_and_reserve(
                 ENDTIME if action else None,
                 fidEnc=fid_enc,
                 seat_page_id=seat_page_id,
+                day_offsets=day_offsets,
             )
             success_list[index] = suc
     return success_list
@@ -519,7 +520,7 @@ def main(users, action=False):
 
 def debug(users, action=False):
     logging.info(
-        f"Global settings: \nSLEEPTIME: {SLEEPTIME}\nENDTIME: {ENDTIME}\nENABLE_SLIDER: {ENABLE_SLIDER}\nENABLE_TEXTCLICK: {ENABLE_TEXTCLICK}\nRESERVE_NEXT_DAY: {RESERVE_NEXT_DAY}"
+        f"Global settings: \nSLEEPTIME: {SLEEPTIME}\nENDTIME: {ENDTIME}\nENABLE_SLIDER: {ENABLE_SLIDER}\nENABLE_TEXTCLICK: {ENABLE_TEXTCLICK}"
     )
     suc = False
     logging.info(f" Debug Mode start! , action {'on' if action else 'off'}")
@@ -546,6 +547,7 @@ def debug(users, action=False):
         seat_page_id = user.get("seatPageId")
         fid_enc = user.get("fidEnc")
         daysofweek = user["daysofweek"]
+        day_offsets = user.get("day_offsets", [1])
         if type(seatid) == str:
             seatid = [seatid]
 
@@ -575,12 +577,12 @@ def debug(users, action=False):
             max_attempt=MAX_ATTEMPT,
             enable_slider=ENABLE_SLIDER,
             enable_textclick=ENABLE_TEXTCLICK,
-            reserve_next_day=RESERVE_NEXT_DAY,
+            day_offset=1,
         )
         s.get_login_status()
         s.login(username, password)
         s.requests.headers.update({"Host": "office.chaoxing.com"})
-        suc = s.submit(times, roomid, seatid, action, None, fidEnc=fid_enc, seat_page_id=seat_page_id)
+        suc = s.submit(times, roomid, seatid, action, None, fidEnc=fid_enc, seat_page_id=seat_page_id, day_offsets=day_offsets)
         if suc:
             return
 
@@ -593,7 +595,7 @@ def get_roomid(args1, args2):
         max_attempt=MAX_ATTEMPT,
         enable_slider=ENABLE_SLIDER,
         enable_textclick=ENABLE_TEXTCLICK,
-        reserve_next_day=RESERVE_NEXT_DAY,
+        day_offset=1,
     )
     s.get_login_status()
     s.login(username=username, password=password)

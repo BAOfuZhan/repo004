@@ -55,7 +55,7 @@ def _build_session():
         sleep_time=0.1,
         max_attempt=10,
         enable_slider=TEST_ENABLE_SLIDER,
-        reserve_next_day=False,
+        day_offset=0,
     )
     s.get_login_status()
     s.login(TEST_USERNAME, TEST_PASSWORD)
