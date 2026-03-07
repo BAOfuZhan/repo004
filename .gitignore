@@ -129,6 +129,10 @@ dmypy.json
 .pyre/
 test.json
 
+<<<<<<< HEAD
 # Local scripts
+=======
+
+>>>>>>> 82f4933 (Auto commit at 2026-03-07 22:32:36)
 workers/
 captcha_debug/
