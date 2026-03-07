@@ -1,0 +1,38 @@
+on:
+  repository_dispatch:
+    types: [cron]
+  workflow_dispatch:        # 允许手动开/关
+
+jobs:
+  reserve:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libglib2.0-0
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run reserve script
+        env:
+          CX_USERNAME: ${{ secrets.CX_USERNAME }}
+          CX_PASSWORD: ${{ secrets.CX_PASSWORD }}
+          TULINGCLOUD_USERNAME: ${{ secrets.TULINGCLOUD_USERNAME }}
+          TULINGCLOUD_PASSWORD: ${{ secrets.TULINGCLOUD_PASSWORD }}
+          TULINGCLOUD_MODEL_ID: ${{ secrets.TULINGCLOUD_MODEL_ID }}
+        run: |
+          python main.py --action
+
+

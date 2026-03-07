@@ -1,0 +1,51 @@
+{
+    "relogin_every_loop": false,
+    "reserve": [
+
+        {
+            "username": "",
+            "password": "",
+            "times": ["07:00", "13:00"],
+            "roomid": "12884",
+            "seatid": ["008"],
+            "seatPageId": "12884",
+            "fidEnc": "3fb13bf8c4950ec5",
+            "daysofweek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        },
+        {
+            "username": "",
+            "password": "",
+            "times": ["13:00", "19:00"],
+            "roomid": "12884",
+            "seatid": ["008"],
+            "seatPageId": "12884",
+            "fidEnc": "3fb13bf8c4950ec5",
+            "daysofweek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        },
+        {
+            "username": "",
+            "password": "",
+            "times": ["19:00", "21:30"],
+            "roomid": "12884",
+            "seatid": ["008"],
+            "seatPageId": "12884",
+            "fidEnc": "3fb13bf8c4950ec5",
+            "daysofweek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        }
+    ],
+
+    "strategy": {
+        "_comment_login_lead_seconds": "在目标时间前多少秒开始执行登录 + 获取 token 的预热逻辑，。",
+        "login_lead_seconds": 15,
+
+        "_comment_slider_lead_seconds": "在目标时间前多少秒开始执行滑块验证，默认 10。",
+        "slider_lead_seconds": 14
+    },
+
+    "_comment_tulingcloud": "图灵云打码平台配置（可选，用于本地开发测试，GitHub Actions 中从 secrets 读取）",
+    "tulingcloud": {
+        "username": "",
+        "password": "",
+        "model_id": ""
+    }
+}
