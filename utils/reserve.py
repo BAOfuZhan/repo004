@@ -555,14 +555,14 @@ class reserve:
         tl = max_loc
         return tl[0]
 
-    def submit(self, times, roomid, seatid, action, endtime_hms: str | None = None, fidEnc: str | None = None, seat_page_id: str | None = None, day_offsets: list | None = None):
+    def submit(self, times, roomid, seatid, action, endtime_hms: str | None = None, fidEnc: str | None = None, seat_page_id: str | None = None, day_offsets: list | None = None, times_per_offset: dict | None = None):
         """提交预约。
 
         关键点：为了模拟手动"刷新页面再提交"，这里每次尝试前都会重新访问
         seatengine/select 页面，获取当下最新的 submit_enc 作为 token/algorithm。
 
         参数:
-            times: [startTime, endTime]
+            times: [startTime, endTime]，默认时间段（当 times_per_offset 未覆盖该 offset 时使用）
             roomid: 房间 id
             seatid: 座位号列表
             action: 是否为 action 场景（保留原逻辑使用）
@@ -570,16 +570,22 @@ class reserve:
             fidEnc: 对应前端 URL 中的 fidEnc 参数（例如 "dac916902610d220"）
             seat_page_id: 对应前端 URL 中的 seatId 参数（例如 "3308"）
             day_offsets: 预约的日期偏移列表，默认 [self.day_offset]
+            times_per_offset: 各 day_offset 对应的时间段，例如 {1: ["16:00", "22:00"], 2: ["09:00", "22:00"]}；
+                             若某 offset 未在此字典中，则回退使用 times 参数
         """
         if day_offsets is None:
             day_offsets = [self.day_offset]
+        if times_per_offset is None:
+            times_per_offset = {}
         
         beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
         
         suc = False
         for delta_day in day_offsets:
+            # 优先使用该 offset 专属的时间段，否则回退到默认 times
+            current_times = times_per_offset.get(delta_day, times)
             day = beijing_today + datetime.timedelta(days=delta_day)
-            logging.info(f"[submit] Starting reservation for day offset: {delta_day} ({day})")
+            logging.info(f"[submit] Starting reservation for day offset: {delta_day} ({day}), times: {current_times}")
             
             # 每次调用 submit 时重置 max_attempt，确保每个配置都有充足的重试机会
             original_max_attempt = self.max_attempt
@@ -632,13 +638,14 @@ class reserve:
                         logging.info(f"Textclick captcha token: {captcha}")
                     suc = self.get_submit(
                         self.submit_url,
-                        times=times,
+                        times=current_times,
                         token=token,
                         roomid=roomid,
                         seatid=seat,
                         captcha=captcha,
                         action=action,
                         value=value,
+                        day=day,  # 传入循环中对应的正确日期（周二或周三）
                     )
                     if suc:
                         logging.info(f"[submit] Reservation successful for day offset: {delta_day} ({day})")
@@ -653,13 +660,13 @@ class reserve:
         return suc
 
     def get_submit(
-        self, url, times, token, roomid, seatid, captcha="", action=False, value=""
+        self, url, times, token, roomid, seatid, captcha="", action=False, value="", day=None
     ):
-        # 统一以北京时间（UTC+8）的"今天"为基准，不再区分本地 / GitHub Actions，
-        # 是否预约明天/后天仅由 self.day_offset 决定。
-        beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
-        delta_day = self.day_offset
-        day = beijing_today + datetime.timedelta(days=delta_day)
+        # 如果调用方已传入具体日期（如 submit() 按 day_offsets 循环传入），直接使用；
+        # 否则回退到 self.day_offset 计算，保持原有行为（如 strategic_first_attempt）。
+        if day is None:
+            beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
+            day = beijing_today + datetime.timedelta(days=self.day_offset)
         # 与前端保持一致：提交 roomId/startTime/endTime/day/seatNum/captcha/wyToken，再计算 enc
         # 按前端逻辑：wyToken 仅在开启网易风控时由 wyRiskObj.getToken() 生成；
         # 常规情况下为空字符串，这里保持一致，不再把 submit_enc 当作 wyToken 传给后端。

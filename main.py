@@ -150,6 +150,8 @@ def strategic_first_attempt(
         seat_page_id = user.get("seatPageId")
         fid_enc = user.get("fidEnc")
         daysofweek = user["daysofweek"]
+        # 各 day_offset 专属时间段（JSON 键为字符串，转为 int）
+        times_per_offset = {int(k): v for k, v in user.get("times_per_offset", {}).items()}
 
         # 今天不预约该配置，跳过
         if current_dayofweek not in daysofweek:
@@ -176,8 +178,11 @@ def strategic_first_attempt(
             logging.error("[strategic] Empty seat list, skip this config")
             continue
 
+        # 策略提交固定预约「明天」（day_offset=1）；若配置了 offset=1 的专属时间则使用之
+        effective_times = times_per_offset.get(1, times)
+
         logging.info(
-            f"[strategic] Start first attempt for {username} -- {times} -- {seat_list} -- seatPageId={seat_page_id} -- fidEnc={fid_enc}"
+            f"[strategic] Start first attempt for {username} -- {effective_times} -- {seat_list} -- seatPageId={seat_page_id} -- fidEnc={fid_enc}"
         )
 
         # 1. 在 [T-30s, T] 区间内完成登录和基础 session（不提前获取页面 token）
@@ -270,7 +275,7 @@ def strategic_first_attempt(
         )
         suc = s.get_submit(
             url=s.submit_url,
-            times=times,
+            times=effective_times,
             token=token1,
             roomid=roomid,
             seatid=first_seat,
@@ -305,7 +310,7 @@ def strategic_first_attempt(
                 )
                 suc = s.get_submit(
                     url=s.submit_url,
-                    times=times,
+                    times=effective_times,
                     token=token2,
                     roomid=roomid,
                     seatid=first_seat,
@@ -339,7 +344,7 @@ def strategic_first_attempt(
                 )
                 suc = s.get_submit(
                     url=s.submit_url,
-                    times=times,
+                    times=effective_times,
                     token=token3,
                     roomid=roomid,
                     seatid=first_seat,
@@ -388,6 +393,7 @@ def login_and_reserve(
         fid_enc = user.get("fidEnc")
         daysofweek = user["daysofweek"]
         day_offsets = user.get("day_offsets", [1])
+        times_per_offset = {int(k): v for k, v in user.get("times_per_offset", {}).items()}
 
         # 如果今天不在该配置的 daysofweek 中，直接跳过
         if current_dayofweek not in daysofweek:
@@ -456,6 +462,7 @@ def login_and_reserve(
                 fidEnc=fid_enc,
                 seat_page_id=seat_page_id,
                 day_offsets=day_offsets,
+                times_per_offset=times_per_offset,
             )
             success_list[index] = suc
     return success_list
@@ -548,6 +555,7 @@ def debug(users, action=False):
         fid_enc = user.get("fidEnc")
         daysofweek = user["daysofweek"]
         day_offsets = user.get("day_offsets", [1])
+        times_per_offset = {int(k): v for k, v in user.get("times_per_offset", {}).items()}
         if type(seatid) == str:
             seatid = [seatid]
 
@@ -582,7 +590,7 @@ def debug(users, action=False):
         s.get_login_status()
         s.login(username, password)
         s.requests.headers.update({"Host": "office.chaoxing.com"})
-        suc = s.submit(times, roomid, seatid, action, None, fidEnc=fid_enc, seat_page_id=seat_page_id, day_offsets=day_offsets)
+        suc = s.submit(times, roomid, seatid, action, None, fidEnc=fid_enc, seat_page_id=seat_page_id, day_offsets=day_offsets, times_per_offset=times_per_offset)
         if suc:
             return
 
