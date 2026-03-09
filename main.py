@@ -72,20 +72,15 @@ RELOGIN_EVERY_LOOP = True
 STRATEGY_LOGIN_LEAD_SECONDS = 18
 # STRATEGY_SLIDER_LEAD_SECONDS: 在目标时间前多少秒开始进行验证
 STRATEGY_SLIDER_LEAD_SECONDS = 14
-<<<<<<< HEAD
-# FIRST_SUBMIT_OFFSET_MS: 第一次提交时，在目标时间之后再延迟多少毫秒去获取 token 并立即提交
-FIRST_SUBMIT_OFFSET_MS = 4
-=======
 # FIRST_SUBMIT_OFFSET_MS: 第一次提交时，在目标时间之后再延迟多少毫秒立即提交（token 已提前获取）
 FIRST_SUBMIT_OFFSET_MS = 107
 # PRE_FETCH_TOKEN_SECONDS: 在目标时间前多少秒提前获取 page token
 PRE_FETCH_TOKEN_SECONDS = 3
->>>>>>> 8ec3087 (Auto commit at 2026-03-09 21:03:13)
 # TARGET_OFFSET2_MS / TARGET_OFFSET3_MS:
 # 在第一次失败后，再额外延迟多少毫秒提交第二 / 第三次带验证码的请求
 # 例如：1200ms、1500ms
-TARGET_OFFSET2_MS = 5
-TARGET_OFFSET3_MS = 11
+TARGET_OFFSET2_MS = 257
+TARGET_OFFSET3_MS = 1102
 
 
 def _get_beijing_target_from_endtime() -> datetime.datetime:
