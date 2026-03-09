@@ -77,8 +77,8 @@ FIRST_SUBMIT_OFFSET_MS = 4
 # TARGET_OFFSET2_MS / TARGET_OFFSET3_MS:
 # 在第一次失败后，再额外延迟多少毫秒提交第二 / 第三次带验证码的请求
 # 例如：1200ms、1500ms
-TARGET_OFFSET2_MS = 257
-TARGET_OFFSET3_MS = 1102
+TARGET_OFFSET2_MS = 5
+TARGET_OFFSET3_MS = 11
 
 
 def _get_beijing_target_from_endtime() -> datetime.datetime:
