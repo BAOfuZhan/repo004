@@ -72,8 +72,15 @@ RELOGIN_EVERY_LOOP = True
 STRATEGY_LOGIN_LEAD_SECONDS = 18
 # STRATEGY_SLIDER_LEAD_SECONDS: 在目标时间前多少秒开始进行验证
 STRATEGY_SLIDER_LEAD_SECONDS = 14
+<<<<<<< HEAD
 # FIRST_SUBMIT_OFFSET_MS: 第一次提交时，在目标时间之后再延迟多少毫秒去获取 token 并立即提交
 FIRST_SUBMIT_OFFSET_MS = 4
+=======
+# FIRST_SUBMIT_OFFSET_MS: 第一次提交时，在目标时间之后再延迟多少毫秒立即提交（token 已提前获取）
+FIRST_SUBMIT_OFFSET_MS = 107
+# PRE_FETCH_TOKEN_SECONDS: 在目标时间前多少秒提前获取 page token
+PRE_FETCH_TOKEN_SECONDS = 3
+>>>>>>> 8ec3087 (Auto commit at 2026-03-09 21:03:13)
 # TARGET_OFFSET2_MS / TARGET_OFFSET3_MS:
 # 在第一次失败后，再额外延迟多少毫秒提交第二 / 第三次带验证码的请求
 # 例如：1200ms、1500ms
@@ -247,14 +254,13 @@ def strategic_first_attempt(
             captcha1 = get_textclick_with_retry("First")
             captcha2 = get_textclick_with_retry("Second")
 
-        # 3. 第一次提交：在目标时间 + FIRST_SUBMIT_OFFSET_MS 毫秒时获取页面 token，获取后立即提交
-        token_fetch_dt1 = target_dt + datetime.timedelta(milliseconds=FIRST_SUBMIT_OFFSET_MS)
-        while _beijing_now() < token_fetch_dt1:
-            # 更短的 sleep 间隔，提高 FIRST_SUBMIT_OFFSET_MS 附近的精度
-            time.sleep(0.001)
+        # 3. 提前获取 page token：在目标时间前 PRE_FETCH_TOKEN_SECONDS 秒获取
+        pre_fetch_dt = target_dt - datetime.timedelta(seconds=PRE_FETCH_TOKEN_SECONDS)
+        while _beijing_now() < pre_fetch_dt:
+            time.sleep(0.1)
 
         logging.info(
-            f"[strategic] Fetch page token for first submit at {token_fetch_dt1} (target_dt + {FIRST_SUBMIT_OFFSET_MS}ms)"
+            f"[strategic] Pre-fetch page token at {_beijing_now()} (target_dt - {PRE_FETCH_TOKEN_SECONDS}s)"
         )
         token1, value1 = s._get_page_token(
             s.url.format(
@@ -270,8 +276,13 @@ def strategic_first_attempt(
             continue
         logging.info(f"[strategic] Got page token for first submit: {token1}, value: {value1}")
 
+        # 4. 等到目标时间 + FIRST_SUBMIT_OFFSET_MS 毫秒后立即提交
+        submit_dt1 = target_dt + datetime.timedelta(milliseconds=FIRST_SUBMIT_OFFSET_MS)
+        while _beijing_now() < submit_dt1:
+            time.sleep(0.001)
+
         logging.info(
-            f"[strategic] Immediately do first submit after fetching page token (target_dt + {FIRST_SUBMIT_OFFSET_MS}ms)"
+            f"[strategic] First submit at {_beijing_now()} (target_dt + {FIRST_SUBMIT_OFFSET_MS}ms)"
         )
         suc = s.get_submit(
             url=s.submit_url,
