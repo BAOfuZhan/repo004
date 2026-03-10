@@ -11,7 +11,7 @@
                 "2": ["09:00", "21:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Monday"],
@@ -26,7 +26,7 @@
                 "2": ["14:00", "22:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Tuesday"],
@@ -41,7 +41,7 @@
                 "2": ["14:00", "22:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Wednesday"],
@@ -56,7 +56,7 @@
                 "2": ["08:30", "20:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Thursday"],
@@ -71,7 +71,7 @@
                 "2": ["08:30", "20:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Friday"],
@@ -86,7 +86,7 @@
                 "2": ["14:00", "22:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Saturday"],
@@ -101,7 +101,7 @@
                 "2": ["16:00", "22:00"]
             },
             "roomid": "9781",
-            "seatid": ["105"],
+            "seatid": ["108"],
             "seatPageId": "9781",
             "fidEnc": "4a60204d8239f49c",
             "daysofweek": ["Sunday"],
