@@ -581,14 +581,13 @@ class reserve:
         beijing_today = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).date()
         
         suc = False
+        # 在循环外保存初始 max_attempt，确保每个 day_offset / 每个座位都能得到完整的重试机会
+        original_max_attempt = self.max_attempt
         for delta_day in day_offsets:
             # 优先使用该 offset 专属的时间段，否则回退到默认 times
             current_times = times_per_offset.get(delta_day, times)
             day = beijing_today + datetime.timedelta(days=delta_day)
             logging.info(f"[submit] Starting reservation for day offset: {delta_day} ({day}), times: {current_times}")
-            
-            # 每次调用 submit 时重置 max_attempt，确保每个配置都有充足的重试机会
-            original_max_attempt = self.max_attempt
 
             for seat in seatid:
                 # 为每个座位重置尝试次数
